@@ -293,6 +293,28 @@ int test_validate_rx_bad_fcs(void) {
 }
 
 /**
+ * @brief Test that a control frame with an invalid FCS is rejected by the framer
+ * (no packet becomes available and no response is transmitted).
+ *
+ * @return int 0 on success, 1 on failure.
+ */
+int test_control_rx_bad_fcs(void) {
+    mock_clear_rx(); mock_clear_tx();
+    uint8_t hdr=0x01; uint8_t source=8; uint8_t dest=0; uint8_t som_eom=0xC8;
+    uint8_t msg_type=0x00; uint8_t instance=0x80; uint8_t cmd=0x02;
+    uint8_t byte_count = 7; uint16_t total_len = (uint16_t)byte_count + 6;
+    uint8_t frame[64] = {0x7E,0x01,byte_count,hdr,dest,source,som_eom,msg_type,instance,cmd};
+    uint16_t fcs = calc_fcs(0xffff, &frame[1], total_len - 4);
+    fcs ^= 0x1234; /* corrupt the FCS */
+    frame[total_len - 3] = (uint8_t)(fcs >> 8); frame[total_len - 2] = (uint8_t)(fcs & 0xFF); frame[total_len - 1] = 0x7E;
+    mock_set_rx_buffer(frame, total_len);
+    while (platform_serial_has_data()) mctp_update();
+    if (require(!mctp_is_packet_available(), "malformed frame incorrectly accepted")) return 1;
+    if (require(mock_tx_len() == 0, "unexpected tx for malformed frame")) return 1;
+    return 0;
+}
+
+/**
  * @brief Test initialization helpers and packet-type helpers.
  *
  * Exercises `mctp_init()` and packet inspection helpers.
@@ -836,6 +858,7 @@ static struct test_entry tests[] = {
     {"test_send_frame_reentrancy", test_send_frame_reentrancy},
     {"test_validate_rx_valid", test_validate_rx_valid},
     {"test_validate_rx_bad_fcs", test_validate_rx_bad_fcs},
+    {"test_control_rx_bad_fcs", test_control_rx_bad_fcs},
     {"test_init_and_helpers", test_init_and_helpers},
     {"test_control_get_endpoint_id", test_control_get_endpoint_id},
     {"test_control_set_endpoint_id_invalid", test_control_set_endpoint_id_invalid},

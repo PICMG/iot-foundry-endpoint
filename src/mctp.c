@@ -231,7 +231,7 @@ static void process_set_endpoint_id_control_message() {
 
     //==========
     // calculate the FCS
-    uint16_t fcs = calc_fcs(INITFCS, mctp_buffer + 1, idx);
+    uint16_t fcs = calc_fcs(INITFCS, mctp_buffer + 1, idx - 1);
     mctp_buffer[idx++] = (fcs >> 8);
     mctp_buffer[idx++] = (fcs & 0x00FF);
 
@@ -293,7 +293,7 @@ void process_get_endpoint_id_control_message() {
 
     //==========
     // calculate the FCS
-    uint16_t fcs = calc_fcs(INITFCS, mctp_buffer + 1, idx);
+    uint16_t fcs = calc_fcs(INITFCS, mctp_buffer + 1, idx - 1);
     mctp_buffer[idx++] = (fcs >> 8);
     mctp_buffer[idx++] = (fcs & 0x00FF);
 
@@ -380,7 +380,7 @@ static void process_get_mctp_version_support_control_message() {
 
     //==========
     // calculate the FCS
-    uint16_t fcs = calc_fcs(INITFCS, mctp_buffer + 1, idx);
+    uint16_t fcs = calc_fcs(INITFCS, mctp_buffer + 1, idx - 1);
     mctp_buffer[idx++] = (fcs >> 8);
     mctp_buffer[idx++] = (fcs & 0x00FF);
 
@@ -436,7 +436,7 @@ void process_get_message_type_support_control_message() {
 
     //==========
     // calculate the FCS
-    uint16_t fcs = calc_fcs(INITFCS, mctp_buffer + 1, idx);
+    uint16_t fcs = calc_fcs(INITFCS, mctp_buffer + 1, idx - 1);
     mctp_buffer[idx++] = (fcs >> 8);
     mctp_buffer[idx++] = (fcs & 0x00FF);
 
@@ -485,7 +485,7 @@ static void process_unsupported_control_message() {
 
     //==========
     // calculate the FCS
-    uint16_t fcs = calc_fcs(INITFCS, mctp_buffer + 1, idx);
+    uint16_t fcs = calc_fcs(INITFCS, mctp_buffer + 1, idx - 1);
     mctp_buffer[idx++] = (fcs >> 8);
     mctp_buffer[idx++] = (fcs & 0x00FF);
 
@@ -526,9 +526,16 @@ void mctp_update() {
          mctp_send_frame(); 
          return; 
     }
-    if (rxState == MCTPSER_AWAITING_RESPONSE) {
-         return; 
-    }
+        if (rxState == MCTPSER_AWAITING_RESPONSE) {
+            /* If a complete frame has been received and we're awaiting
+              response transmission, consume any remaining bytes in the
+              platform RX buffer so callers that loop on
+              platform_serial_has_data() will not spin indefinitely. */
+            while (platform_serial_has_data()) {
+               (void)platform_serial_read_byte();
+            }
+            return;
+        }
     if (!platform_serial_has_data()) {
         return;
     }
