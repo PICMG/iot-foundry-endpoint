@@ -89,12 +89,12 @@ my-platform-repo/
 ├─ LICENSE
 ├─ platform.c          # platform glue implementing functions from include/platform.h
 ├─ include/            # public headers for platform consumers
-│  └─ core/            # core headers copied from this project (place core headers here)
-├─ src/                # optional platform helpers and drivers
-├─ core/               # core C sources copied from this project (place core .c files here)
-│  ├─ mctp.c
-│  └─ fcs.c
-├─ tests/              # platform-specific tests and mocks (if applicable)
+│  └─ core/            # core headers copied from this │     └─ mctp.h (for instance)
+project (place core headers here)
+├─ src/                # your platform code codes here
+│  └─ core/            # core src/ files copied from this this project
+│     └─ mctp.c (for instance)
+├─ tests/              # platform-specific tests
 └─ ci/                 # CI pipelines / scripts
 ```
 Example Makefile snippet (platform repo) that downloads this repo's sources and builds with a local `platform.c`:

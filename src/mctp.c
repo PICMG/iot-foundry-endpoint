@@ -522,6 +522,13 @@ void mctp_init() {
  */
 void mctp_update() {
     uint8_t byte_value;
+    if (rxState == SENDING_RESPONSE) {
+         mctp_send_frame(); 
+         return; 
+    }
+    if (rxState == MCTPSER_AWAITING_RESPONSE) {
+         return; 
+    }
     if (!platform_serial_has_data()) {
         return;
     }
@@ -631,6 +638,7 @@ void mctp_update() {
             // here if we are waiting for the response to be sent
             // this state transition will occur at first beginning of an mctp_send_frame()
             // call
+            break;
         case SENDING_RESPONSE:
             // continue sending the response frame
             // this state transition will occur after the frame has been completely sent.
