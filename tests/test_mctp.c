@@ -48,6 +48,8 @@
 #define MCTP_BUFFER_SIZE (64 + 6)
 #endif
 
+static uint8_t device_eid = 0x00; /* default EID for testing, can be overridden by tests */
+
 /* forward-declare mock helpers from platform_mock.c */
 void mock_clear_tx(void);
 void mock_set_can_write(uint8_t v);
@@ -429,7 +431,7 @@ int test_send_control_message_and_wait_for_response(uint8_t frame[], uint16_t to
  * @return int 0 on success, 1 on failure.
  */
 int test_control_get_endpoint_id(void) {
-    uint8_t hdr_version = 0x01; uint8_t source_id = 8; uint8_t destination_id = 0; uint8_t som_eom = 0xC8;
+    uint8_t hdr_version = 0x01; uint8_t source_id = 8; uint8_t destination_id = device_eid; uint8_t som_eom = 0xC8;
     uint8_t message_type = 0x00; uint8_t instance_id = 0x80; uint8_t command_code = 0x02;
     uint8_t byte_count = 7; uint16_t total_len = (uint16_t)byte_count + 6;
     uint8_t frame[64] = {0x7E,0x01,byte_count,hdr_version,destination_id,source_id,som_eom,message_type,instance_id,command_code};
@@ -439,6 +441,8 @@ int test_control_get_endpoint_id(void) {
     uint8_t out[256]; uint16_t out_len = unescape_tx(mock_tx_buffer(), mock_tx_len(), out, sizeof(out));
     if (require(out_len > 10, "response too short")) return 1;
     if (require(out[10] == 0x00, "completion code not success")) return 1;
+    if (require(out[11] == device_eid, "eid mismatch")) return 1;
+    printf("GET_ENDPOINT_ID response: completion=0x%02x eid=0x%02x\n", out[10], out[11]);
     return 0;
 }
 
@@ -481,9 +485,10 @@ int test_control_set_endpoint_id_success(void) {
     uint8_t out[256]; unescape_tx(mock_tx_buffer(), mock_tx_len(), out, sizeof(out));
     if (require(out[10] == CONTROL_COMPLETE_SUCCESS, "completion not success")) return 1;
     if (require(out[11] == 0x00, "endpoint acceptance not accepted")) return 1;
-    if (require(out[12] == 0x00, "returned previous eid mismatch")) return 1;
+    if (require(out[12] == 0x09, "returned previous eid mismatch")) return 1;
     /* Now send a GET_ENDPOINT_ID to new eid and check we respond */
     if (require(send_and_check(eid) == 1, "did not respond to new eid")) return 1;
+    device_eid = eid; /* update global for other tests */
     return 0;
 }
 
@@ -864,6 +869,7 @@ static struct test_entry tests[] = {
     {"test_control_set_endpoint_id_invalid", test_control_set_endpoint_id_invalid},
     {"test_control_set_endpoint_id_success", test_control_set_endpoint_id_success},
     {"test_control_get_message_type_support", test_control_get_message_type_support},
+    {"test_control_get_endpoint_id", test_control_get_endpoint_id},
     {"test_control_get_mctp_version_support", test_control_get_mctp_version_support},
     {"test_control_unsupported_command", test_control_unsupported_command},
     {"test_control_sequence_tag_instance", test_control_sequence_tag_instance},
