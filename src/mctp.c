@@ -195,6 +195,7 @@ static void process_set_endpoint_id_control_message() {
         } else {
             completion_code = CONTROL_COMPLETE_SUCCESS;
             endpoint_acceptance_status = 0x00;  // EID accepted
+            endpoint_id = eid;
         }
     }
 
@@ -239,11 +240,6 @@ static void process_set_endpoint_id_control_message() {
     mctp_buffer[idx++] = FRAME_CHAR;
 
     mctp_send_frame();
-
-    // set the endpoint id
-    if (completion_code == CONTROL_COMPLETE_SUCCESS) {
-        endpoint_id = eid;
-    }
 }
 
 /**
