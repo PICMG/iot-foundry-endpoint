@@ -68,4 +68,19 @@ void platform_serial_write_byte(uint8_t b);
  */
 uint8_t platform_serial_can_write(void);
 
+
+/**
+ * @brief Return the non-volatile value for the device's EID.
+ *
+ * @return uint8_t The EID value.
+ */
+uint8_t platform_get_stored_eid();
+
+/**
+ * @brief Store the device's EID value in non-volatile memory.
+ *
+ * @param value The EID value to store.
+ */
+void platform_set_stored_eid(uint8_t value);
+
 #endif /* PLATFORM_H */

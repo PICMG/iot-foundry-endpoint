@@ -80,7 +80,6 @@ uint16_t calc_fcs(uint16_t f, uint8_t* cp, int len);
 #define ESCAPE_CHAR 0x7D
 
 /* device configuration */
-static uint8_t endpoint_id = 0x00;             // set to unprogrammed
 static uint8_t byte_count;                     // body bytes left to receive for current frame
 #ifdef UNIT_TEST
 uint8_t buffer_idx;                     /* index into the receive buffer (exposed to tests) */
@@ -195,7 +194,7 @@ static void process_set_endpoint_id_control_message() {
         } else {
             completion_code = CONTROL_COMPLETE_SUCCESS;
             endpoint_acceptance_status = 0x00;  // EID accepted
-            endpoint_id = eid;
+            platform_set_stored_eid(eid);
         }
     }
 
@@ -203,7 +202,7 @@ static void process_set_endpoint_id_control_message() {
     idx = OFFSET_CTRL_COMPLETION_CODE;
     mctp_buffer[idx++] = completion_code;
     mctp_buffer[idx++] = endpoint_acceptance_status;
-    mctp_buffer[idx++] = endpoint_id;
+    mctp_buffer[idx++] = platform_get_stored_eid();  // current endpoint id (after set)    
     mctp_buffer[idx++] = 0x00;  // eid pool size
 
     //===========
@@ -255,7 +254,7 @@ void process_get_endpoint_id_control_message() {
 
     uint16_t idx = OFFSET_CTRL_COMPLETION_CODE;
     mctp_buffer[idx++] = CONTROL_COMPLETE_SUCCESS;
-    mctp_buffer[idx++] = endpoint_id;
+    mctp_buffer[idx++] = platform_get_stored_eid();
     mctp_buffer[idx++] = 0x00;  // endpoint type = simple endpoint;
 
     //===========
@@ -606,7 +605,7 @@ void mctp_update() {
                    Destination EID must be 0x00 (broadcast), 0xFF (all endpoints),
                    or match the configured `endpoint_id`. Otherwise drop the frame. */
                 uint8_t dest = mctp_buffer[OFFSET_DESTINATION_ENDPOINT_ID];
-                if ((dest == 0x00) || (dest == 0xFF) || (dest == endpoint_id)) {
+                if ((dest == 0x00) || (dest == 0xFF) || (dest == platform_get_stored_eid())) {
                     rxState = MCTPSER_AWAITING_RESPONSE;
                 } else {
                     rxState = MCTPSER_WAITING_FOR_SYNC;

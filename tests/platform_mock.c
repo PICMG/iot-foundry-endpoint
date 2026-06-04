@@ -93,6 +93,26 @@ uint8_t platform_serial_can_write() {
     return can_write_state < 5;
 }
 
+static uint8_t stored_eid = 0;
+/**
+ * @brief Return the non-volatile value for the device's EID.
+ *
+ * @return uint8_t The EID value.
+ */
+uint8_t platform_get_stored_eid() 
+{
+    return stored_eid; /* default EID for testing, can be overridden by tests */
+}
+
+/**
+ * @brief Store the device's EID value in non-volatile memory.
+ *
+ * @param value The EID value to store.
+ */
+void platform_set_stored_eid(uint8_t value) {
+    stored_eid = value;
+}
+
 /* Test helpers for mock */
 
 /**
