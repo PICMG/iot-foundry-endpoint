@@ -298,6 +298,58 @@ void process_get_endpoint_id_control_message() {
     mctp_send_frame();
 }
 
+void process_get_uuid_control_message() {
+    // dont process packet if not ready
+    if (!mctp_is_packet_available()) return;
+
+    uint16_t idx = OFFSET_CTRL_COMPLETION_CODE;
+    mctp_buffer[idx++] = CONTROL_COMPLETE_SUCCESS;
+    const uint8_t *uuidp = platform_get_uuid();
+    for (int i = 0; i < 16; i++) {
+        mctp_buffer[idx++] = uuidp[i];
+    }
+    
+    //===========
+    // updates to the control message header
+    // clear the rq bit in the instance id byte
+    mctp_buffer[OFFSET_CTRL_INSTANCE_ID] &= ~0x80;
+
+    //===========
+    // updates to the media independent header
+    // reverse the source and destination EID values
+    uint8_t source_eid = mctp_buffer[OFFSET_SOURCE_ENDPOINT_ID];
+    uint8_t dest_eid = mctp_buffer[OFFSET_DESTINATION_ENDPOINT_ID];
+    mctp_buffer[OFFSET_SOURCE_ENDPOINT_ID] = dest_eid;
+    mctp_buffer[OFFSET_DESTINATION_ENDPOINT_ID] = source_eid;
+
+    // recalculate the byte count
+    mctp_buffer[OFFSET_BYTE_COUNT] = idx - OFFSET_BYTE_COUNT - 1;
+
+    //===========
+    // updates to the control message header
+    // clear the rq bit in the instance id byte
+    mctp_buffer[OFFSET_CTRL_INSTANCE_ID] &= ~0x80;
+
+    //===========
+    // toggle the Tag Owner (TO) bit for responses
+    mctp_buffer[OFFSET_FLAGS] ^= 0x08;
+
+    //===========
+    // set the som/eom bits to indicate single frame response
+    mctp_buffer[OFFSET_FLAGS] |= 0xC0;
+
+    //==========
+    // calculate the FCS
+    uint16_t fcs = calc_fcs(INITFCS, mctp_buffer + 1, idx - 1);
+    mctp_buffer[idx++] = (fcs >> 8);
+    mctp_buffer[idx++] = (fcs & 0x00FF);
+
+    // add the frame end character
+    mctp_buffer[idx++] = FRAME_CHAR;
+
+    mctp_send_frame();
+}
+
 /**
  * @brief Handle a Get MCTP Version Support control request.
  *
@@ -705,6 +757,8 @@ void mctp_process_control_message() {
         process_set_endpoint_id_control_message();
     } else if (mctp_buffer[OFFSET_CTRL_COMMAND_CODE] == CONTROL_MSG_GET_ENDPOINT_ID) {
         process_get_endpoint_id_control_message();
+    } else if (mctp_buffer[OFFSET_CTRL_COMMAND_CODE] == CONTROL_MSG_GET_UUID) {
+        process_get_uuid_control_message();
     } else if (mctp_buffer[OFFSET_CTRL_COMMAND_CODE] == CONTROL_MSG_GET_MCTP_VERSION_SUPPORT) {
         process_get_mctp_version_support_control_message();
     } else if (mctp_buffer[OFFSET_CTRL_COMMAND_CODE] == CONTROL_MSG_GET_MESSAGE_TYPE_SUPPORT) {

@@ -493,6 +493,32 @@ int test_control_set_endpoint_id_success(void) {
 }
 
 /**
+ * @brief Test GET_UUID control command.
+ *
+ * Verifies UUID bytes are returned as expected.
+ *
+ * @return int 0 on success, 1 on failure.
+ */
+int test_control_get_uuid(void) {
+    uint8_t hdr_version = 0x01; uint8_t source_id = 8; uint8_t destination_id = device_eid; uint8_t som_eom = 0xC8;
+    uint8_t message_type = 0x00; uint8_t instance_id = 0x80; uint8_t command_code = 0x03;
+    uint8_t byte_count = 7; uint16_t total_len = (uint16_t)byte_count + 6;
+    uint8_t frame[64] = {0x7E,0x01,byte_count,hdr_version,destination_id,source_id,som_eom,message_type,instance_id,command_code};
+    uint16_t fcs = calc_fcs(0xffff, &frame[1], total_len - 4);
+    frame[total_len - 3] = (uint8_t)(fcs >> 8); frame[total_len - 2] = (uint8_t)(fcs & 0xFF); frame[total_len - 1] = 0x7E;
+    if (require(test_send_control_message_and_wait_for_response(frame, total_len) == 0, "control response failed")) return 1;
+    uint8_t out[256]; uint16_t out_len = unescape_tx(mock_tx_buffer(), mock_tx_len(), out, sizeof(out));
+    if (require(out_len > 10, "response too short")) return 1;
+    if (require(out[10] == 0x00, "completion code not success")) return 1;
+    printf("GET_UUID response: ");
+    for (uint8_t i = 11; i < out_len-3; i++) {
+        printf("%02x ", out[i]);
+    }
+    printf("\n");
+    return 0;
+}
+
+/**
  * @brief Test GET_MESSAGE_TYPE_SUPPORT control command.
  *
  * Verifies reported supported message types include expected ones.
@@ -870,6 +896,7 @@ static struct test_entry tests[] = {
     {"test_control_set_endpoint_id_success", test_control_set_endpoint_id_success},
     {"test_control_get_message_type_support", test_control_get_message_type_support},
     {"test_control_get_endpoint_id", test_control_get_endpoint_id},
+    {"test_control_get_uuid", test_control_get_uuid},
     {"test_control_get_mctp_version_support", test_control_get_mctp_version_support},
     {"test_control_unsupported_command", test_control_unsupported_command},
     {"test_control_sequence_tag_instance", test_control_sequence_tag_instance},

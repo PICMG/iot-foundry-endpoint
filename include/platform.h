@@ -83,4 +83,11 @@ uint8_t platform_get_stored_eid();
  */
 void platform_set_stored_eid(uint8_t value);
 
+/**
+ * @brief Return the device's 128-bit (16-byte) UUID.
+ *
+ * @return const uint8_t * The UUID string.
+ */
+const uint8_t *platform_get_uuid(void);
+
 #endif /* PLATFORM_H */
