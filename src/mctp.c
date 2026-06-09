@@ -255,7 +255,12 @@ void process_get_endpoint_id_control_message() {
     uint16_t idx = OFFSET_CTRL_COMPLETION_CODE;
     mctp_buffer[idx++] = CONTROL_COMPLETE_SUCCESS;
     mctp_buffer[idx++] = platform_get_stored_eid();
-    mctp_buffer[idx++] = 0x00;  // endpoint type = simple endpoint;
+    if (platform_get_stored_eid() == 0) {
+        mctp_buffer[idx++] = 0x00;  // endpoint type = simple endpoint, dynamic only
+    } else {
+        mctp_buffer[idx++] = 0x01;  // endpoint type = simple endpoint, static supported
+    }
+    mctp_buffer[idx++] = 0x00;  // media specific
 
     //===========
     // updates to the control message header
@@ -451,9 +456,10 @@ void process_get_message_type_support_control_message() {
     uint16_t idx = OFFSET_CTRL_COMPLETION_CODE;
     // control protocol message version information
     mctp_buffer[idx++] = CONTROL_COMPLETE_SUCCESS;
-    mctp_buffer[idx++] = 4;  // total message types supported
+    mctp_buffer[idx++] = 5;  // total message types supported
     mctp_buffer[idx++] = CONTROL_MSG_SET_ENDPOINT_ID;
     mctp_buffer[idx++] = CONTROL_MSG_GET_ENDPOINT_ID;
+    mctp_buffer[idx++] = CONTROL_MSG_GET_UUID;
     mctp_buffer[idx++] = CONTROL_MSG_GET_MCTP_VERSION_SUPPORT;
     mctp_buffer[idx++] = CONTROL_MSG_GET_MESSAGE_TYPE_SUPPORT;
 
